@@ -1,0 +1,130 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class SnakeGame : MonoBehaviour
+{
+    public GameObject snakeBodyPrefab;  // Prefab for the snake's body
+    public GameObject foodPrefab;       // Prefab for the food
+    public Text scoreText;              // UI Text for the score
+    private List<Transform> snakeBody = new List<Transform>();
+    private Vector2 direction = Vector2.right;
+    private Vector2 nextDirection;
+    private float moveTimer;
+    private float moveInterval = 0.1f;  // Speed of the snake's movement
+    private int score = 0;
+    private Transform food;
+
+    void Start()
+    {
+        // Create the initial snake
+        snakeBody.Add(transform);
+        GenerateFood();
+    }
+
+    void Update()
+    {
+        HandleInput();
+        HandleMovement();
+        UpdateSnakeBodyPositions();
+        CheckCollisions();
+        UpdateScore();
+    }
+
+    // Handle player input (arrow keys or WASD)
+    void HandleInput()
+    {
+        if (Input.GetKeyDown(KeyCode.W) && direction != Vector2.down)
+            nextDirection = Vector2.up;
+        if (Input.GetKeyDown(KeyCode.S) && direction != Vector2.up)
+            nextDirection = Vector2.down;
+        if (Input.GetKeyDown(KeyCode.A) && direction != Vector2.right)
+            nextDirection = Vector2.left;
+        if (Input.GetKeyDown(KeyCode.D) && direction != Vector2.left)
+            nextDirection = Vector2.right;
+    }
+
+    // Move the snake and update positions
+    void HandleMovement()
+    {
+        if (moveTimer <= 0f)
+        {
+            direction = nextDirection;
+            Vector2 newHeadPosition = (Vector2)snakeBody[0].position + direction;
+            Transform newHead = Instantiate(snakeBodyPrefab).transform;
+            newHead.position = newHeadPosition;
+            snakeBody.Insert(0, newHead);
+
+            if (snakeBody[0].position == food.position)
+            {
+                // Snake eats food, increase score and generate new food
+                score++;
+                Destroy(food.gameObject);
+                GenerateFood();
+            }
+            else
+            {
+                // Remove the tail if no food is eaten
+                Destroy(snakeBody[snakeBody.Count - 1].gameObject);
+                snakeBody.RemoveAt(snakeBody.Count - 1);
+            }
+
+            moveTimer = moveInterval;
+        }
+        else
+        {
+            moveTimer -= Time.deltaTime;
+        }
+    }
+
+    // Update the positions of each part of the snake's body
+    void UpdateSnakeBodyPositions()
+    {
+        for (int i = snakeBody.Count - 1; i > 0; i--)
+        {
+            snakeBody[i].position = snakeBody[i - 1].position;
+        }
+    }
+
+    // Check for collisions with walls or itself
+    void CheckCollisions()
+    {
+        // Check for wall collisions
+        if (snakeBody[0].position.x < 0 || snakeBody[0].position.x >= 20 || snakeBody[0].position.y < 0 || snakeBody[0].position.y >= 20)
+        {
+            GameOver();
+        }
+
+        // Check for self-collision
+        for (int i = 1; i < snakeBody.Count; i++)
+        {
+            if (snakeBody[0].position == snakeBody[i].position)
+            {
+                GameOver();
+            }
+        }
+    }
+
+    // Game Over logic
+    void GameOver()
+    {
+        Time.timeScale = 0;  // Pause the game
+        Debug.Log("Game Over! Final Score: " + score);
+    }
+
+    // Generate a new food at a random position
+    void GenerateFood()
+    {
+        float x = Mathf.Floor(Random.Range(0, 20));
+        float y = Mathf.Floor(Random.Range(0, 20));
+        food = Instantiate(foodPrefab).transform;
+        food.position = new Vector2(x, y);
+    }
+
+    // Update the score UI text
+    void UpdateScore()
+    {
+        scoreText.text = "Score: " + score;
+    }
+}
